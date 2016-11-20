@@ -1,5 +1,4 @@
 //mapper
-
 import java.io.IOException;
 
 import java.util.StringTokenizer;
@@ -28,6 +27,7 @@ public class M extends
 
 		if (!caseSensitive) {
 			line = line.toLowerCase();
+
 		}
 
 		StringTokenizer tokenizer = new StringTokenizer(line);

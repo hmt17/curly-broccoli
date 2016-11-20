@@ -1,5 +1,5 @@
 //driver
-\import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -12,21 +12,15 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-public class D extends Configured implements Tool {
-	public int run(String[] args) throws Exception {
-		if (args.length != 2) {
-			System.out.println("Usage: [input] [output]");
-			System.exit(-1);
-		}
+public class D {
 
-		Job job = Job.getInstance(getConf());
-		job.setJobName("wordcount");
+	public static void main(String[] args) throws Exception {
+		
+		Configuration conf = new Configuration();
+		Job job = new Job(conf);
+		//job.setJobName("wordcount");
 		job.setJarByClass(D.class);
-		
-		/* Field separator for reducer output*/
-		job.getConfiguration().set("mapreduce.output.textoutputformat.separator", " | ");
-		
-		
+				
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(Text.class);
 
@@ -48,18 +42,12 @@ public class D extends Configured implements Tool {
 
 
 		/* Delete output filepath if already exists */
-		FileSystem fs = FileSystem.newInstance(getConf());
+		FileSystem fs = FileSystem.newInstance(conf);
 
 		if (fs.exists(outputFilePath)) {
 			fs.delete(outputFilePath, true);
 		}
 		
-		return job.waitForCompletion(true) ? 0 : 1;
-	}
-
-	public static void main(String[] args) throws Exception {
-		D wordcountDriver = new D();
-		int res = ToolRunner.run(wordcountDriver, args);
-	    System.exit(res);
+		System.exit(job.waitForCompletion(true) ? 0 : 1);
 	}
 }

@@ -1,4 +1,3 @@
-//driver
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -30,6 +29,9 @@ public class D {
 
 		job.setInputFormatClass(TextInputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);
+		
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(docOffsets.class);
 		
 		Path inputFilePath = new Path(args[0]);
 		Path outputFilePath = new Path(args[1]);

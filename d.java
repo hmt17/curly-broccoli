@@ -24,7 +24,7 @@ public class D {
 		job.setOutputValueClass(Text.class);
 
 		job.setMapperClass(M.class);
-		job.setCombinerClass(R.class);
+		//job.setCombinerClass(R.class);
 		job.setReducerClass(R.class);
 
 		job.setInputFormatClass(TextInputFormat.class);

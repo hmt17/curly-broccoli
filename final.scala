@@ -87,7 +87,6 @@ object Main {
 /*
         println("\r\n Parser output - searching for 'computer'")
 
-        /* works! this is for the parser */
         val parser = new LineParser("hdfs://" + outputPath, "computer")
         parser.parse()
         val result = parser.parserResult.asScala

@@ -8,7 +8,7 @@ import org.apache.spark.mllib.linalg.distributed._
 import java.io._
 import java.io.File
 import collection.JavaConverters._
-//import com.cloud._
+import com.cloud._
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
@@ -23,14 +23,14 @@ class filec(val filen: String, val offsets:List[Long]) extends Comparable[filec]
     }
 
     override def toString: String = {
-        "{[" + filen + "][" + offsets.mkString(",") + "]}"
+        "{[" + filen + "][" + offsets.length + "][" + offsets.mkString(",") + "]}"
     }
 };
 
 object Main {
     def main(args: Array[String]) {
         val conf = new SparkConf().setAppName("Final")
-        //val sc = new SparkContext(conf)
+        val sc = new SparkContext(conf)
 
 
 
@@ -84,13 +84,14 @@ object Main {
         }
 
         out.close()
-/*
+
         println("\r\n Parser output - searching for 'computer'")
 
+        /* works! this is for the parser */
         val parser = new LineParser("hdfs://" + outputPath, "computer")
         parser.parse()
         val result = parser.parserResult.asScala
         result.foreach(a => println(a))
-*/
+
     }
 }

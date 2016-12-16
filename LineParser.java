@@ -9,13 +9,13 @@ class LineParser {
 
   String pathStr;
   ArrayList<ParserReturnable> parserResult = new ArrayList<ParserReturnable>();
-  private static String FULLREGEX = "(.*)-\\{(.*)\\}";
+  private static String FULLREGEX = "(^.*)-\\{(.*)\\}";
   private static String REGEX = "(\\[([^\\]]+)(?=\\])])";
     Configuration conf = new Configuration();
   
   public LineParser(String path, String key) {
     this.pathStr = path;
-    FULLREGEX = "(" + key + ")-\\{(.*)\\}";
+    FULLREGEX = "(^" + key + ")-\\{(.*)\\}";
   }
   
   public void parse() throws Exception {

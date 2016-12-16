@@ -11,6 +11,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import java.util.*;
+import java.io.*;
 import java.sql.Timestamp;
 
 public class D {
@@ -25,7 +26,7 @@ public class D {
         //while((command = scanner.nextInt()) != 4) {
         //while(exit == false){
 			System.out.println("Please input a command:");
-			System.out.println("1 = Index \t 2 = Search word(s) \t 3 = Search phrase \t 4 = Quit");
+			System.out.println("1 = Index \t 2 = Search word(s) \t 3 = Search phrase \t \t 4 = Quit");
 			command = scanner.nextInt();
 				switch(command) {
 					case 1:
@@ -41,50 +42,14 @@ public class D {
 						Search(1, args[0], args[1]);
 						break;
 					case 4:
-						//System.exit(0);
 						exit = true;
 						break;
 					default:
 						System.out.println("Please enter valid input.");
 				}
-            
-            //System.out.println("Please input a command:");
-            //System.out.println("1 = Index \t 2 = Search word(s) \t 3 = Search phrase \t 4 = Quit");
         //}
         System.exit(0);
     }
-/*
-	public static void main(String[] args) throws Exception {
-        boolean indexCompleted = false;
-        
-        while(true) {
-            System.out.println("Please input a command:");
-            System.out.println("1 = Index \t 2 = Search word(s) \t 3 = Search phrase \t 4 = Quit");
-            
-            Scanner scanner = new Scanner(System.in);
-            String command = scanner.next();
-            
-            switch(command) {
-                case "1":
-                    indexCompleted = RunIndex(args);
-                    if(!indexCompleted) {
-                        System.exit(1);
-                    }
-                    break;
-                case "2":
-                    Search(0, args[0], args[1]);
-                    break;
-                case "3":
-                    Search(1, args[0], args[1]);
-                    break;
-                case "4":
-                    System.exit(0);
-                    break;
-                default:
-                    System.out.println("Please enter valid input.");
-            }
-        }
-    }*/
     
     public static boolean RunIndex(String[] args) throws Exception {
     
@@ -161,47 +126,18 @@ public class D {
                 ArrayList<ParserReturnable> output = lp.parserResult;
                 if(searchType == 0) {
                     /* Just keep track of all the returned output and put in descending order */
-							
-					int j = 0;
-
-                    for(ParserReturnable pr: output) {
-						//totalList.add(pr);
-						if(j==0){
-							/* add to arraylist first iteration */
-							totalList.add(pr);
-						} 
-						else{
-							int sizeList = totalList.size();
-							boolean containsFile = totalList.contains(pr.filename);
-							System.out.println(containsFile);
-							for(int a = 0; a < sizeList; a++){
-								int lessOrGreater = 0;
-								ParserReturnable temp = totalList.get(a); //new ParserReturnable;
-								lessOrGreater = pr.compareTo(temp);
-								if(containsFile){
-								/*if file is in list */	
-									if(pr.filename.equals(temp.filename)){
-										System.out.println("HELLO");
-										int sum = pr.numOfOccur + temp.numOfOccur;
-										totalList.get(a).setNumofOccurs(sum);
-									}
-								}
-								else{
-								/*if file isn't in list */	
-									/* if new num is greater than*/
-									if(lessOrGreater == 1){
-										totalList.add(0, pr);
-										break;
-									}
-									/* if new num is less than*/
-									else{
-										/* do nothing */
-									}
-								}
+                    boolean found = false;
+					for(ParserReturnable pr: output) {
+						for(ParserReturnable pr2: totalList){
+							if(pr2.filename.equals(pr.filename)){
+								found = true;
+								pr2.numOfOccur = pr2.numOfOccur + pr.numOfOccur;
 							}
-							System.out.println(sizeList + " and " + totalList.size());
 						}
-						j++;
+						if(!found){
+							totalList.add(pr);
+						}
+						found = false;
 					}
                 }
                 else {
@@ -243,17 +179,62 @@ public class D {
                 System.out.println("Error in parse: " + e.getMessage());
             }
         }
-        scanner.close();
-        
+        //ArrayList<ParserReturnable> newList = new ArrayList<ParserReturnable>();
+		System.out.println("Would you like your results saved? Press 1 for yes or 2 for no: ");
+		int saved = scanner.nextInt();
+		int j=0;
         if(searchType == 0) {
-            for(ParserReturnable pr: totalList) {
-                System.out.println(pr.toString());
-            }
-        }
+           Collections.sort(totalList, new Comparator<ParserReturnable>() {
+				@Override
+				public int compare(ParserReturnable p1, ParserReturnable p2){
+					
+					if( p1.numOfOccur > (p2.numOfOccur)){
+						return -1; 
+					}
+					else if( p1.numOfOccur < (p2.numOfOccur)){
+						return 1; 
+					}
+					else{
+						return 0;
+					}
+				}
+			});
+			for(ParserReturnable pr: totalList){
+				System.out.println(pr.toString());
+			}
+			
+			
+				if(saved==1){
+					//FileWriter fw = new FileWriter ("textfile.txt");
+					// BufferedWriter writer = (fw);
+					try (BufferedWriter bw = new BufferedWriter(new FileWriter("output.txt"))) {
+						String line = totalList.toString();
+						bw.write(line);
+						bw.close();
+					}
+					catch(IOException e){
+						
+					}
+				}
+		}
+            
+        
         else {
         	for(ParserReturnable pr: searchingForOffsets) {
-                	System.out.println(pr.toString());
+				System.out.println(pr.toString());
+				if(saved==1){
+					try (BufferedWriter bw = new BufferedWriter(new FileWriter("output.txt"))) {
+						String line = totalList.toString();
+						bw.write(line);
+						bw.close();
+					}
+					catch(IOException e){
+						
+					}
+				}
 			}
 		}
+		scanner.close();
     }
+	
 }

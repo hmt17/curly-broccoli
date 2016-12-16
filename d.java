@@ -18,29 +18,35 @@ public class D {
         boolean indexCompleted = false;
         Scanner scanner = new Scanner(System.in);
         int command;
-        System.out.println("Please input a command:");
-        System.out.println("1 = Index \t 2 = Search word(s) \t 3 = Search phrase \t 4 = Quit");
-        command = scanner.nextInt();
+		boolean exit = false;
+        //System.out.println("Please input a command:");
+        //System.out.println("1 = Index \t 2 = Search word(s) \t 3 = Search phrase \t 4 = Quit");
+        //command = scanner.nextInt();
         //while((command = scanner.nextInt()) != 4) {
-            switch(command) {
-                case 1:
-                    indexCompleted = RunIndex(args);
-                    if(!indexCompleted) {
-                        System.exit(1);
-                    }
-                    break;
-                case 2:
-                    Search(0, args[0], args[1]);
-                    break;
-                case 3:
-                    Search(1, args[0], args[1]);
-                    break;
-                case 4:
-                    System.exit(0);
-                    break;
-                default:
-                    System.out.println("Please enter valid input.");
-            }
+        //while(exit == false){
+			System.out.println("Please input a command:");
+			System.out.println("1 = Index \t 2 = Search word(s) \t 3 = Search phrase \t 4 = Quit");
+			command = scanner.nextInt();
+				switch(command) {
+					case 1:
+						indexCompleted = RunIndex(args);
+						if(!indexCompleted) {
+							System.exit(1);
+						}
+						break;
+					case 2:
+						Search(0, args[0], args[1]);
+						break;
+					case 3:
+						Search(1, args[0], args[1]);
+						break;
+					case 4:
+						//System.exit(0);
+						exit = true;
+						break;
+					default:
+						System.out.println("Please enter valid input.");
+				}
             
             //System.out.println("Please input a command:");
             //System.out.println("1 = Index \t 2 = Search word(s) \t 3 = Search phrase \t 4 = Quit");
@@ -154,20 +160,61 @@ public class D {
                 lp.parse();
                 ArrayList<ParserReturnable> output = lp.parserResult;
                 if(searchType == 0) {
-                    /* Just keep track of all the returned output */
+                    /* Just keep track of all the returned output and put in descending order */
+							
+					int j = 0;
+
                     for(ParserReturnable pr: output) {
-                        totalList.add(pr);
-                    }
+						//totalList.add(pr);
+						if(j==0){
+							/* add to arraylist first iteration */
+							totalList.add(pr);
+						} 
+						else{
+							int sizeList = totalList.size();
+							boolean containsFile = totalList.contains(pr.filename);
+							System.out.println(containsFile);
+							for(int a = 0; a < sizeList; a++){
+								int lessOrGreater = 0;
+								ParserReturnable temp = totalList.get(a); //new ParserReturnable;
+								lessOrGreater = pr.compareTo(temp);
+								if(containsFile){
+								/*if file is in list */	
+									if(pr.filename.equals(temp.filename)){
+										System.out.println("HELLO");
+										int sum = pr.numOfOccur + temp.numOfOccur;
+										totalList.get(a).setNumofOccurs(sum);
+									}
+								}
+								else{
+								/*if file isn't in list */	
+									/* if new num is greater than*/
+									if(lessOrGreater == 1){
+										totalList.add(0, pr);
+										break;
+									}
+									/* if new num is less than*/
+									else{
+										/* do nothing */
+									}
+								}
+							}
+							System.out.println(sizeList + " and " + totalList.size());
+						}
+						j++;
+					}
                 }
                 else {
-                    /* need check the current output to see if it matchest a file & offset from the previous term. if so, then they occur sequentially in the text */
+                    /* need check the current output to see if it matchest a file & offset from the previous term. 
+					if so, then they occur sequentially in the text */
                     if(searchingForOffsets.size() == 0) {
                         for(ParserReturnable pr: output) {
                             ParserReturnable newPr = new ParserReturnable();
                             newPr.filename = pr.filename;
                             newPr.numOfOccur = pr.numOfOccur;
                             for(Integer offset: pr.offsets) {
-                                /* the next word in the sequence should occur at "term"'s offset, plus "term"'s length, plug one for the space between words */
+                                /* the next word in the sequence should occur at "term"'s offset, plus "term"'s length, 
+								plug one for the space between words */
                                 newPr.offsets.add(offset + term.length() + 1);
                             }
                             searchingForOffsets.add(newPr);
@@ -206,7 +253,7 @@ public class D {
         else {
         	for(ParserReturnable pr: searchingForOffsets) {
                 	System.out.println(pr.toString());
-                }
-	}
+			}
+		}
     }
 }

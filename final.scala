@@ -16,6 +16,7 @@ import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.io.LongWritable
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat
 import org.apache.hadoop.io.Text;
+import scala.collection.mutable._
 
 
 class filec(val filen: String, val offsets:List[Long]) extends Comparable[filec] with Serializable {
@@ -33,30 +34,30 @@ object Main {
         val conf = new SparkConf().setAppName("Final")
         val sc = new SparkContext(conf)
 		
-		var exit = false;
+		var exit = true;
 		while(exit){
 			println("Please input a command:")
 			println("1 = Index \t 2 = Search word(s) \t 3 = Search phrase \t 4 = Quit")
 			val ln = readLine()
 			
-			if(ln = 1){
+			if(ln == "1"){
 			//index 
-				val indexCompleted = RunIndex(args);				
-				if(!indexCompleted) {
+				val indexCompleted = RunIndex(args, sc);
+				/*if(!indexCompleted) {
 					System.exit(1)
-				}
+				}*/
 			}
-			else if(ln = 2){
+			else if(ln == "2"){
 			//search word(s)
-				Search(0)
+				Search(0, args)
 			}
-			else if(ln = 3){
+			else if(ln == "3"){
 			//search phrase
-				Search(1)
+				Search(1, args)
 			}
-			else if(ln = 4){
+			else if(ln == "4"){
 			//quit
-				exit = true
+				exit = false
 			}
 			else{
 			//wrong input
@@ -66,8 +67,8 @@ object Main {
 		System.exit(1)
 	}
 		
-	def RunIndex() {
-        val startTime = new java.sql.Timestamp(date.getTime)
+def RunIndex(args: Array[String], context: SparkContext) {
+        val startTime = System.currentTimeMillis
         /* this needs to be a method not a function b/c by itself it is not serializable and will error out! */
         val func = (line:(Long,String)) => {
             val words = line._2.split(" ");
@@ -80,22 +81,22 @@ object Main {
             )
             test
         }
-		
-        println("Hello world")
 
-        val inputPath = "/user/hmt17/input/"
-        val outputPath = "/user/hmt17/output/scalaout"
+        //val inputPath = "/user/djflash/input/"
+        val inputPath = args(0)
+        //val outputPath = "/user/djflash/output/scalaout"
+        val outputPath:String = args(1) + "scalaout"
         val fs = FileSystem.get(new Configuration())
         val status = fs.listStatus(new Path(inputPath))
         val output = fs.create(new Path(outputPath))
         val out = new BufferedOutputStream(output)
-        var all:RDD[(String, filec)] = sc.emptyRDD[(String, filec)]
+        var all:RDD[(String, filec)] = context.emptyRDD[(String, filec)]
 
         status.foreach(x=> {
             val path:Path = x.getPath
             val filename:String = path.getName
 
-            var lines:RDD[Tuple2[Long, String]] = sc.newAPIHadoopFile(inputPath + filename, classOf[TextInputFormat], classOf[LongWritable],classOf[Text], sc.hadoopConfiguration).map{ case (x:LongWritable, y:Text) => (x.get,y.toString) }
+            var lines:RDD[Tuple2[Long, String]] = context.newAPIHadoopFile(inputPath + filename, classOf[TextInputFormat], classOf[LongWritable],classOf[Text], context.hadoopConfiguration).map{ case (x:LongWritable, y:Text) => (x.get,y.toString) }
             var pairsPerLine = lines.map{case (x:Long, y:String) => func(x,y)}
             var pairs = pairsPerLine.flatMap(y => y)
             var fullPairs = pairs.map{case(a:Long,b:String) => { println(filename + " " + a.toString + " " + b); (filename,a,b)}}
@@ -119,25 +120,136 @@ object Main {
         }
 
         out.close()
-		val endTime = new java.sql.Timestamp(date.getTime)
+		val endTime = System.currentTimeMillis
 		println("Difference: " + (endTime - startTime))
 	}
-     def Search(wordOrPhrase: Int) {
-		val startTime = new java.sql.Timestamp(date.getTime)
-		
-		if(
-		val input = readLine("Please enter the words to search (seperated by a single space):")
-		
-		println("\r\n Parser output - searching for '" + input + "'")
+     def Search(wordOrPhrase: Int, args: Array[String]) {
+        val startTime = System.currentTimeMillis
+        var input:String = ""
+        var saveOutput: String = ""
+        if(wordOrPhrase == 0) {
+            input = readLine("Please enter the words to search (seperated by a single space):")
+        }
+        else {
+            input = readLine("Please enter the phrase to search:")
+        }
 
-        /* works! this is for the parser */
-        val parser = new LineParser("hdfs://" + outputPath, input)
-        parser.parse()
-        val result = parser.parserResult.asScala
-        result.foreach(a => println(a))
+        while(saveOutput == "") {
+            saveOutput = readLine("Would you like to save your results? Your output will be saved to your output directory with file name 'last_results'. Please enter 'y' or 'n'.")
+                    
+            if(saveOutput != "y" && saveOutput != "n") {
+                saveOutput = ""
+            }
+        }
 
-		val endTime = new java.sql.Timestamp(date.getTime)
+
+        println("\r\n Parser output - searching for '" + input + "'")
+
+        var totalList:ArrayBuffer[ParserReturnable] = new ArrayBuffer[ParserReturnable]()
+        var searchingForOffsets:ArrayBuffer[ParserReturnable] = new ArrayBuffer[ParserReturnable]()
+
+        val terms:Array[String] = input.split(" ")
+
+        /* HARDCODED OUTPUT PATH */
+        terms.foreach(term => {
+            println("searching term: " + term)
+            var foundInTotalList:Boolean = false
+            val outputPath:String = args(1) + "scalaout"
+            val parser = new LineParser("hdfs://" + outputPath, term)
+            parser.parse()
+            val result = parser.parserResult.asScala
+
+            /* check if we're doing word searches or phrasing */
+            if(wordOrPhrase == 0) {
+                result.foreach(returnable => {
+                    totalList.foreach(returned => {
+                        if(returned.filename == returnable.filename) {
+                            foundInTotalList = true
+                            returned.numOfOccur = (returned.numOfOccur + returnable.numOfOccur)
+                        }
+                    })
+
+                    if(foundInTotalList == false) {
+                        println("adding filename: " + returnable.filename)
+                        totalList += returnable
+                    }
+                    foundInTotalList = false
+                })
+            }
+            else {
+                if(searchingForOffsets.size == 0) {
+                    result.foreach(a => {
+                        var pr: ParserReturnable = new ParserReturnable()
+                        pr.filename = a.filename
+                        pr.numOfOccur = a.numOfOccur
+                        val offsets = a.offsets.asScala
+                        offsets.foreach{case (offset:Integer) => {
+                                pr.offsets.add(offset + term.length() + 1)
+                                
+                        }}
+                        searchingForOffsets += pr
+                    })
+                }
+                else {
+
+                    var temp: ArrayBuffer[ParserReturnable] = new ArrayBuffer[ParserReturnable]()
+
+                    result.foreach(output => {
+                        searchingForOffsets.foreach(last => {
+                            if(output.filename == last.filename) {
+                                output.offsets.retainAll(last.offsets)
+                                if(output.offsets.size > 0) {
+                                    temp += new ParserReturnable(last.filename, output.offsets.size, output.offsets)
+                                }
+                            }
+                        })
+                    }) /* result foreach */
+                    searchingForOffsets = new ArrayBuffer[ParserReturnable]()
+                    searchingForOffsets = temp.clone() /* copy */
+                } /* searchingoffsets else */
+            } /* wordOrPhrase else */
+        }) /* terms foreach */
+
+        val endTime = System.currentTimeMillis
+
+
+        if(wordOrPhrase == 0) {
+            if(saveOutput == "y") {
+                saveOutputFile(totalList, args)
+            }
+            printOutput(totalList)
+        }
+        else {
+            if(saveOutput == "y") {
+                saveOutputFile(searchingForOffsets, args)
+            }
+            printOutput(searchingForOffsets)
+        }
+        
 		println("Difference: " + (endTime - startTime))
     }
+
+    def printOutput(list: ArrayBuffer[ParserReturnable]) {
+        val cmp = (x:ParserReturnable, y:ParserReturnable) => x.numOfOccur > y.numOfOccur
+        val sorted = scala.util.Sorting.stableSort(list, cmp)
+        sorted.foreach(println)
+    }
+
+def saveOutputFile(list: ArrayBuffer[ParserReturnable], args:Array[String]) {
+        val outputPath:String = args(1) + "last_results"
+        val fs = FileSystem.get(new Configuration())
+        val output = fs.create(new Path(outputPath))
+        val out = new BufferedOutputStream(output)
+        out.write("------ Output File -----\r\n".getBytes("UTF-8"))
+
+        list.foreach(returnable => {
+            out.write(returnable.toString.getBytes("UTF-8"))
+            out.write("\r\n".getBytes("UTF-8"))
+        })
+
+        out.write("----- Finished -----".getBytes("UTF-8"))
+        out.write("\r\n".getBytes("UTF-8"))
+        out.close()
+    }
 }
-System.exit(0)
+
